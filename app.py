@@ -204,22 +204,30 @@ if generate_btn:
                 audio_paths = []
                 
                 for i, scene in enumerate(plan.scenes):
-                    st.write(f"📺 Processing Scene {i+1}/{len(plan.scenes)}...")
+                    st.write(f"📺 Scene {i+1}/{len(plan.scenes)}: Generating assets...")
                     
-                    # Fetch and download video
+                    # 3a. Video Fetching
                     video_url = video_fetcher.fetch_video(scene.keywords, scene.duration)
                     if video_url:
                         video_path = os.path.join(TEMP_DIR, f"video_{i}.mp4")
-                        video_fetcher.download_video(video_url, video_path)
-                        video_paths.append(video_path)
+                        if video_fetcher.download_video(video_url, video_path):
+                            video_paths.append(video_path)
+                            st.write(f"  ✅ Video found for keywords: {', '.join(scene.keywords[:2])}")
+                        else:
+                            video_paths.append(None)
+                            st.warning(f"  ⚠️ Video download failed for Scene {i+1}.")
                     else:
-                        st.warning(f"Could not find a video for Scene {i+1}. Using fallback.")
-                        # Handle missing video logic...
+                        video_paths.append(None)
+                        st.warning(f"  ⚠️ No video found for Scene {i+1}. (Using fallback)")
 
-                    # Generate and save voiceover
+                    # 3b. Voiceover Generation
                     audio_path = os.path.join(TEMP_DIR, f"audio_{i}.mp3")
-                    voice_gen.generate_voiceover(scene.narration, language, audio_path)
-                    audio_paths.append(audio_path)
+                    if voice_gen.generate_voiceover(scene.narration, language, audio_path):
+                        audio_paths.append(audio_path)
+                        st.write(f"  ✅ Voiceover generated ({language})")
+                    else:
+                        audio_paths.append(None)
+                        st.error(f"  ❌ Voiceover failed for Scene {i+1}.")
 
                 # 4. Assembly
                 st.write("🎞️ Assembling final video...")
