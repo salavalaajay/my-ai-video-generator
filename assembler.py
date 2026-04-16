@@ -18,26 +18,39 @@ class VideoAssembler:
         for i, scene in enumerate(plan.scenes):
             try:
                 # Load video and audio
-                video_clip = VideoFileClip(video_paths[i])
-                audio_clip = AudioFileClip(audio_paths[i])
+                video_clip = None
+                audio_clip = None
+                
+                if i < len(video_paths) and video_paths[i] and os.path.exists(video_paths[i]):
+                    video_clip = VideoFileClip(video_paths[i])
+                
+                if i < len(audio_paths) and audio_paths[i] and os.path.exists(audio_paths[i]):
+                    audio_clip = AudioFileClip(audio_paths[i])
+                
+                # If both are missing, use a placeholder
+                if not video_clip and not audio_clip:
+                    clips.append(ColorClip(size=(1280, 720), color=(0,0,0), duration=scene.duration))
+                    continue
                 
                 # Determine the target duration for this scene
-                # We prioritize the audio duration but ensure it's at least a reasonable length
-                scene_duration = max(audio_clip.duration, scene.duration)
+                scene_duration = scene.duration
+                if audio_clip:
+                    scene_duration = max(audio_clip.duration, scene_duration)
                 
-                # Resize video clip to 1080p landscape (if needed)
-                video_clip = video_clip.resize(height=720).crop(x_center=video_clip.w/2, y_center=video_clip.h/2, width=1280, height=720)
-                
-                # Sync durations
-                if video_clip.duration < scene_duration:
-                    # Loop video if it's too short for the scene
-                    video_clip = video_clip.loop(duration=scene_duration)
+                # Handle missing video: create a dark gray background
+                if not video_clip:
+                    video_clip = ColorClip(size=(1280, 720), color=(20, 20, 20), duration=scene_duration)
                 else:
-                    # Trim video to the target scene duration
-                    video_clip = video_clip.subclip(0, scene_duration)
+                    # Resize and sync video
+                    video_clip = video_clip.resize(height=720).crop(x_center=video_clip.w/2, y_center=video_clip.h/2, width=1280, height=720)
+                    if video_clip.duration < scene_duration:
+                        video_clip = video_clip.loop(duration=scene_duration)
+                    else:
+                        video_clip = video_clip.subclip(0, scene_duration)
                 
-                # Set audio (it will play from the start)
-                video_clip = video_clip.set_audio(audio_clip)
+                # Set audio if it exists
+                if audio_clip:
+                    video_clip = video_clip.set_audio(audio_clip)
                 
                 # Optional: Add subtitles
                 # For now, let's keep it simple and just add the narration text if possible
