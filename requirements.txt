@@ -1,0 +1,10 @@
+streamlit
+openai
+moviepy
+gTTS
+requests
+python-dotenv
+pydantic
+moviepy<2.0.0
+groq
+edge-tts
